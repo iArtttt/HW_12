@@ -1,21 +1,21 @@
 ﻿namespace HW_12
 {    
-    class ThreadParam
+    class ThreadParam<T,TResult>
     {
-        private readonly int[] _arr;
+        private readonly T[] _arr;
         public Range Range { get; }
         public static object SyncRoot => new();
-        public int this[int index] => _arr[index];
-        public ulong Result { get; set; } = 0;
+        public T this[int index] => _arr[index];
+        public TResult Result { get; set; } = default;
 
-        private ThreadParam(int[] arr, Range range)
+        private ThreadParam(T[] arr, Range range)
         {
             _arr = arr;
             Range = range;
         }
-        public static ThreadParam Create(int[] arr, Range range)
+        public static ThreadParam<T, TResult> Create(T[] arr, Range range)
         {
-            return new ThreadParam(arr, range);
+            return new ThreadParam<T, TResult>(arr, range);
         }
     }
     
