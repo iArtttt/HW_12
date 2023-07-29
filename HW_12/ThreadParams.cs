@@ -1,4 +1,6 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
+using System.Text;
 
 namespace HW_12
 {
@@ -7,13 +9,14 @@ namespace HW_12
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<int, ulong>)obj!;
-            var range = param.Range;
+            var span = param.Data.Span;
 
             var sum = 0uL;
-            for (int i = range.Start.Value; i < range.End.Value; i++)
+            for (int i = 0; i < span.Length; i++)
             {
-                param.ProgressUpdate(range, i);
-                sum += (ulong)param[i];
+                //TODO: need recalculate indexes from the relative to absolute values, or redesign a progress handling
+                //param.ProgressUpdate(range, i);
+                sum += (ulong)span[i];
             }
             param.Result = sum;
         }
@@ -32,15 +35,16 @@ namespace HW_12
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<ulong, ulong>)obj!;
-            var range = param.Range;
-            ulong result = 0;
+            var span = param.Data.Span;
 
-            for (int i = range.Start.Value; i < range.End.Value; i++)
+            ulong result = 0;
+            for (int i = 0; i < span.Length; i++)
             {
-                result += param[i];
-                param.ProgressUpdate(range, i);
+                //TODO: need recalculate indexes from the relative to absolute values, or redesign a progress handling
+                //param.ProgressUpdate(range, i);
+                result += span[i];
             }
-            param.Result = result / (ulong)(range.End.Value - range.Start.Value);
+            param.Result = result / (ulong)span.Length;
         }
 
         public ulong ThreadResult(ThreadParam<T, ulong>[] threadParams)
@@ -57,13 +61,16 @@ namespace HW_12
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<T, T>)obj!;
-            var range = param.Range;
+            var span = param.Data.Span;
+
             T result = default;
-            for (int i = range.Start.Value; i < range.End.Value; i++)
+            for (int i = 0; i < span.Length; i++)
             {
-                if (Compare(result, param[i]) < 0)
-                    result = param[i];
-                param.ProgressUpdate(range, i);
+                if (Compare(result, span[i]) < 0)
+                    result = span[i];
+
+                //TODO: need recalculate indexes from the relative to absolute values, or redesign a progress handling
+                //param.ProgressUpdate(range, i);
             }
             param.Result = result;
         }
@@ -92,10 +99,10 @@ namespace HW_12
         protected override int Compare(T result, T param) => result < param? -1 : 1;
     }
 
-    internal class CopyThreadStrategy<T> : IThreadStrategy<T, T[]>
+    internal class CopyThreadStrategy<T> : IInitParams, IThreadStrategy<T, T[]>
     {
-        public bool HasIndex => true;
         public Range Range { get; }
+
         public CopyThreadStrategy(int startIndex, int lastIndex)
         {
             Range = new Range(startIndex, lastIndex);
@@ -104,17 +111,34 @@ namespace HW_12
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<T, T[]>)obj!;
-            var range = param.Range;
-            T[] result = new T[range.End.Value - range.Start.Value];
+            var span = param.Data.Span;
 
-            for (int i = range.Start.Value, j = 0; i < range.End.Value; i++, j++)
+            T[] result = new T[span.Length];
+
+            for (int i = 0, j = 0; i < span.Length; i++, j++)
             {
-                result[j] = param[i];
-                param.ProgressUpdate(range, i);
+                result[j] = span[i];
+                //TODO: need recalculate indexes from the relative to absolute values, or redesign a progress handling
+                //param.ProgressUpdate(range, i);
             }
             param.Result = result;
         }
+
         public T[] ThreadResult(ThreadParam<T, T[]>[] threadParams) => threadParams.SelectMany(s => s.Result!).ToArray();
+
+        public ThreadParam<T1, TResult>[] Init<T1, TResult>(Memory<T1> data, int threadCount)
+        {
+            var result = new ThreadParam<T1, TResult>[threadCount];
+            data = data[Range]; // slice all data to the initial copy range
+
+            var itemsCount = data.Length / threadCount;
+            for (int i = 0; i < threadCount; i++)
+            {
+                result[i] = ThreadParam<T1, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
+            }
+
+            return result;
+        }
     }
 
     internal abstract class FrequencyDictionaryThreadStrategy<T> : IThreadStrategy<T, Dictionary<T, int>> where T : notnull
@@ -122,21 +146,19 @@ namespace HW_12
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<T, Dictionary<T, int>>)obj!;
-            var range = param.Range;
+            var span = param.Data.Span;
+
             Dictionary<T, int> result = new();
 
-            for (int i = range.Start.Value; i < range.End.Value; i++)
+            for (int i = 0; i < span.Length; i++)
             {
-                if (result.ContainsKey(param[i]))
-                {
-                    result[param[i]]++;
-                    param.ProgressUpdate(range, i);
-                }
+                if (result.ContainsKey(span[i]))
+                    result[span[i]]++;
                 else
-                {
-                    result.Add(param[i], 1);
-                    param.ProgressUpdate(range, i);
-                }
+                    result.Add(span[i], 1);
+
+                //TODO: need recalculate indexes from the relative to absolute values, or redesign a progress handling
+                //param.ProgressUpdate(range, i);
             }
             param.Result = result;
         }
