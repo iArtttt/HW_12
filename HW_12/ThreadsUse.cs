@@ -2,10 +2,9 @@
 
 namespace HW_12
 {
-    class ThreadsUse<T, TResult>
+    internal abstract class ThreadsUse<T, TResult>
     {
         private ThreadParam<T, TResult>[]? _ThreadParams;
-        private IThreadParam<T, TResult> _threadParam;
         private Thread[] _threads;
         private TResult? _result = default;
         public TResult? Result => _result;
@@ -17,15 +16,15 @@ namespace HW_12
             ThreadsCount();
         }
 
-        public void ThreadDo(IThreadParam<T, TResult> threadParams)
+        public void ThreadDo(IThreadParamStrategy<T, TResult> threadParams)
         {
             FeelThread(threadParams);
-            if (_ThreadParams == null || _threadParam == default) return;
+            if (_ThreadParams == null || threadParams == default) return;
 
-            if (_threadParam.HasIndex)
+            if (threadParams.HasIndex)
             {
-                if (_threads.Length == 1) _ThreadParams[0] = ThreadParam<T, TResult>.Create(_arr, new Range(_threadParam.StartIndex, _threadParam.LastIndex));
-                else RangeSetRecursion(_threads, _arr, 0, _threadParam);
+                if (_threads.Length == 1) _ThreadParams[0] = ThreadParam<T, TResult>.Create(_arr, new Range(threadParams.Range.Start.Value, threadParams.Range.End.Value));
+                else RangeSetRecursion(_threads, _arr, 0, threadParams);
             }
             else
             {
@@ -39,19 +38,18 @@ namespace HW_12
                 _threads[i].Start(_ThreadParams[i]);
             for (int i = 0; i < _threads.Length; i++)
                 _threads[i].Join();
-            _result = (TResult)_threadParam.ThreadResult(_ThreadParams);
+            _result = (TResult)threadParams.ThreadResult(_ThreadParams);
             _timer.Stop();
         }
         public void Print()
         {
             Console.WriteLine($"Result is {Result}; Time is {_timer.Elapsed}");
         }
-        private void FeelThread(IThreadParam<T, TResult> threadParams)
+        private void FeelThread(IThreadParamStrategy<T, TResult> threadParams)
         {
-            _threadParam = threadParams;
             for (int i = 0; i < _threads.Length; i++)
             {
-                _threads[i] = new Thread(_threadParam.ThreadMethod);
+                _threads[i] = new Thread(threadParams.ThreadMethod);
             }
             _ThreadParams = new ThreadParam<T, TResult>[_threads.Length];
         }
@@ -59,7 +57,7 @@ namespace HW_12
         {
             if (thread == 0)
             {
-                _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(0, arr.Length / threads.Length));
+                _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(0, arr.Length / threads.Length), thread);
 
                 thread++;
                 RangeSetRecursion(threads, arr, thread);
@@ -68,22 +66,22 @@ namespace HW_12
             {
                 _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(
                     arr.Length / threads.Length * thread,
-                    (arr.Length / threads.Length * thread) + (arr.Length / threads.Length)));
+                    (arr.Length / threads.Length * thread) + (arr.Length / threads.Length)), thread);
 
                 thread++;
                 RangeSetRecursion(threads, arr, thread);
             }
             else
             {
-                _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(arr.Length / threads.Length * thread, arr.Length));
+                _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(arr.Length / threads.Length * thread, arr.Length), thread);
             }
         }
-        private void RangeSetRecursion(Thread[] threads, T[] arr, int thread, IThreadParam<T, TResult> length)
+        private void RangeSetRecursion(Thread[] threads, T[] arr, int thread, IThreadParamStrategy<T, TResult> length)
         {
             if (thread == 0)
             {
                 _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(
-                    length.StartIndex, length.StartIndex + ((length.LastIndex - length.StartIndex) / threads.Length)));
+                    length.Range.Start.Value, length.Range.Start.Value + ((length.Range.End.Value - length.Range.Start.Value) / threads.Length)), thread);
 
                 thread++;
                 RangeSetRecursion(threads, arr, thread, length);
@@ -91,8 +89,8 @@ namespace HW_12
             else if (thread < threads.Length - 1)
             {
                 _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(
-                    length.StartIndex + ((length.LastIndex - length.StartIndex) / threads.Length * thread),
-                    length.StartIndex + ((length.LastIndex - length.StartIndex) / threads.Length) * (thread + 1)));
+                    length.Range.Start.Value + ((length.Range.End.Value- length.Range.Start.Value) / threads.Length * thread),
+                    length.Range.Start.Value + ((length.Range.End.Value - length.Range.Start.Value) / threads.Length) * (thread + 1)), thread);
 
                 thread++;
                 RangeSetRecursion(threads, arr, thread, length);
@@ -100,7 +98,7 @@ namespace HW_12
             else
             {
                 _ThreadParams![thread] = ThreadParam<T, TResult>.Create(arr, new Range(
-                    length.LastIndex / threads.Length * thread, length.LastIndex));
+                    length.Range.End.Value / threads.Length * thread, length.Range.End.Value), thread);
             }
         }
         private void ThreadsCount()

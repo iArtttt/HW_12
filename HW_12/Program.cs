@@ -8,7 +8,6 @@ namespace HW_12
     {
         static void Main(string[] args)
         {
-            
         }
     }
 }
