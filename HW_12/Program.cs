@@ -18,7 +18,7 @@ namespace HW_12
             var threadsCount = int.Parse(Console.ReadLine());
             if (threadsCount <= 0) threadsCount = 1;
 
-            var threadProcessor = new ThreadsUse<int, int>(threadsCount, arr, new MaxThreadParam<int>());
+            var threadProcessor = new ThreadsUse<int, int>(threadsCount, arr, new MaxThreadStrategy<int>());
             threadProcessor.ThreadDo();
             threadProcessor.Print();
         }

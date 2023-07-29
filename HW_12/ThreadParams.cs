@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Numerics;
 
 namespace HW_12
 {
-    internal class SumThreadParam<T> : IThreadStrategy<T, ulong> where T : INumber<T>
+    internal class SumThreadStrategy<T> : IThreadStrategy<T, ulong> where T : INumber<T>
     {
         public void ThreadMethod(object? obj)
         {
@@ -17,7 +12,7 @@ namespace HW_12
             var sum = 0uL;
             for (int i = range.Start.Value; i < range.End.Value; i++)
             {
-                param.Pr(range, i);
+                param.ProgressUpdate(range, i);
                 sum += (ulong)param[i];
             }
             param.Result = sum;
@@ -31,7 +26,8 @@ namespace HW_12
             return result;
         }
     }
-    internal class AverageThreadParam<T> : IThreadStrategy<T, ulong> where T : INumber<T>
+
+    internal class AverageThreadStrategy<T> : IThreadStrategy<T, ulong> where T : INumber<T>
     {
         public void ThreadMethod(object? obj)
         {
@@ -41,8 +37,8 @@ namespace HW_12
 
             for (int i = range.Start.Value; i < range.End.Value; i++)
             {
-                result += (ulong)param[i];
-                param.Pr(range, i);
+                result += param[i];
+                param.ProgressUpdate(range, i);
             }
             param.Result = result / (ulong)(range.End.Value - range.Start.Value);
         }
@@ -56,7 +52,7 @@ namespace HW_12
         }
     }
 
-    internal abstract class MaxMin<T> : IThreadStrategy<T, T> where T : INumber<T>
+    internal abstract class MaxMinThreadStrategy<T> : IThreadStrategy<T, T> where T : struct, INumber<T>
     {
         public void ThreadMethod(object? obj)
         {
@@ -67,8 +63,7 @@ namespace HW_12
             {
                 if (Compare(result, param[i]) < 0)
                     result = param[i];
-                var r = result > param[i];
-                param.Pr(range, i);                
+                param.ProgressUpdate(range, i);
             }
             param.Result = result;
         }
@@ -86,21 +81,22 @@ namespace HW_12
             return result;
         }
     }
-    internal class MaxThreadParam<T> : MaxMin<T> where T : INumber<T>
+
+    internal class MaxThreadStrategy<T> : MaxMinThreadStrategy<T> where T : struct, INumber<T>
     {
         protected override int Compare(T result, T param) => result > param ? 1 : -1;
     }
-    internal class MinThreadParam<T> : MaxMin<T> where T : INumber<T>
+
+    internal class MinThreadStrategy<T> : MaxMinThreadStrategy<T> where T : struct, INumber<T>
     {
         protected override int Compare(T result, T param) => result < param? -1 : 1;
-        
     }
 
-    internal class CopyThreadParam<T> : IThreadStrategy<T, T[]>
+    internal class CopyThreadStrategy<T> : IThreadStrategy<T, T[]>
     {
         public bool HasIndex => true;
         public Range Range { get; }
-        public CopyThreadParam(int startIndex, int lastIndex)
+        public CopyThreadStrategy(int startIndex, int lastIndex)
         {
             Range = new Range(startIndex, lastIndex);
         }
@@ -114,14 +110,14 @@ namespace HW_12
             for (int i = range.Start.Value, j = 0; i < range.End.Value; i++, j++)
             {
                 result[j] = param[i];
-                param.Pr(range, i);
+                param.ProgressUpdate(range, i);
             }
             param.Result = result;
         }
         public T[] ThreadResult(ThreadParam<T, T[]>[] threadParams) => threadParams.SelectMany(s => s.Result!).ToArray();
     }
 
-    internal abstract class FrequencyDictionaryThreadParam<T> : IThreadStrategy<T, Dictionary<T, int>>
+    internal abstract class FrequencyDictionaryThreadStrategy<T> : IThreadStrategy<T, Dictionary<T, int>> where T : notnull
     {
         public void ThreadMethod(object? obj)
         {
@@ -134,12 +130,12 @@ namespace HW_12
                 if (result.ContainsKey(param[i]))
                 {
                     result[param[i]]++;
-                    param.Pr(range, i);
+                    param.ProgressUpdate(range, i);
                 }
                 else
                 {
                     result.Add(param[i], 1);
-                    param.Pr(range, i);
+                    param.ProgressUpdate(range, i);
                 }
             }
             param.Result = result;
@@ -164,11 +160,5 @@ namespace HW_12
             }
             return result;
         }
-    }
-    internal class FrequencyStringDictionaryThreadParam : FrequencyDictionaryThreadParam<string>
-    {
-    }
-    internal class FrequencyCharDictionaryThreadParam : FrequencyDictionaryThreadParam<char>
-    {
     }
 }
