@@ -5,11 +5,14 @@ using System.Threading;
 
 namespace HW_12
 {
-    internal interface IThreadParamStrategy<T, TResult>
+    internal interface IThreadStrategy<T, TResult>
     {
-        public bool HasIndex => false;
-        public Range Range => default;
         public void ThreadMethod(object? obj);
         public TResult ThreadResult(ThreadParam<T, TResult>[] threadParams);
+    }
+
+    internal interface IInitParams
+    {
+        public ThreadParam<T, TResult>[] Init<T, TResult>(Memory<T> data, int threadCount);
     }
 }

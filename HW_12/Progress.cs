@@ -2,7 +2,7 @@
 {
     internal static class Progress
     {
-        public static void Pr<T, TResult>(this ThreadParam<T, TResult> param, Range range, int progress)
+        public static void ProgressUpdate<T, TResult>(this ThreadParam<T, TResult> param, Range range, int progress)
         {
             if ((progress + 1) % (((decimal)range.End.Value - range.Start.Value) / 100) == 0 || (progress + 1) % range.End.Value == 0)
             {
