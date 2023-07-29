@@ -8,7 +8,7 @@
         public T this[int index] => _arr[index];
         public TResult? Result { get; set; } = default;
         public int Position { get; }
-        private readonly IThreadParamStrategy<T, TResult>? _param;
+        private readonly IThreadStrategy<T, TResult>? _param;
 
         private ThreadParam(T[] arr, Range range)
         {

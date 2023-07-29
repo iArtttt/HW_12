@@ -7,12 +7,8 @@ using System.Threading.Tasks;
 
 namespace HW_12
 {
-    internal class SumThreadParam<T> : ThreadsUse<T, ulong>, IThreadParamStrategy<T, ulong> where T : INumber<T>
+    internal class SumThreadParam<T> : IThreadStrategy<T, ulong> where T : INumber<T>
     {
-        public SumThreadParam(T[] arr) : base(arr)
-        {
-        }
-
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<int, ulong>)obj!;
@@ -35,12 +31,8 @@ namespace HW_12
             return result;
         }
     }
-    internal class AverageThreadParam<T> : ThreadsUse<T, ulong>, IThreadParamStrategy<T, ulong> where T : INumber<T>
+    internal class AverageThreadParam<T> : IThreadStrategy<T, ulong> where T : INumber<T>
     {
-        public AverageThreadParam(T[] arr) : base(arr)
-        {
-        }
-
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<ulong, ulong>)obj!;
@@ -64,11 +56,8 @@ namespace HW_12
         }
     }
 
-    internal abstract class MaxMin<T> : ThreadsUse<T, T>, IThreadParamStrategy<T, T> where T : INumber<T>
+    internal abstract class MaxMin<T> : IThreadStrategy<T, T> where T : INumber<T>
     {
-        public MaxMin(T[] arr) : base(arr)
-        {
-        }
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<T, T>)obj!;
@@ -76,22 +65,22 @@ namespace HW_12
             T result = default;
             for (int i = range.Start.Value; i < range.End.Value; i++)
             {
-                if (Compare(result, param[i]) > 0)
+                if (Compare(result, param[i]) < 0)
                     result = param[i];
+                var r = result > param[i];
                 param.Pr(range, i);                
             }
             param.Result = result;
         }
-        protected virtual int Compare(T result, T compare)
-        {
-            throw new NotImplementedException();
-        }
+
+        protected abstract int Compare(T result, T compare);
+
         public T ThreadResult(ThreadParam<T, T>[] threadParams)
         {
             T result = default;
             foreach (var thread in threadParams)
             {
-                if (Compare(result, thread.Result) > 0)
+                if (Compare(result, thread.Result) < 0)
                     result = thread.Result;
             }
             return result;
@@ -99,30 +88,23 @@ namespace HW_12
     }
     internal class MaxThreadParam<T> : MaxMin<T> where T : INumber<T>
     {
-        public MaxThreadParam(T[] arr) : base(arr)
-        {
-        }
-
         protected override int Compare(T result, T param) => result > param ? 1 : -1;
     }
     internal class MinThreadParam<T> : MaxMin<T> where T : INumber<T>
     {
-        public MinThreadParam(T[] arr) : base(arr)
-        {
-        }
-
         protected override int Compare(T result, T param) => result < param? -1 : 1;
         
     }
 
-    internal class CopyThreadParam<T> : ThreadsUse<T, T[]>, IThreadParamStrategy<T, T[]>
+    internal class CopyThreadParam<T> : IThreadStrategy<T, T[]>
     {
         public bool HasIndex => true;
         public Range Range { get; }
-        public CopyThreadParam(T[] arr, int startIndex, int lastIndex) : base(arr)
+        public CopyThreadParam(int startIndex, int lastIndex)
         {
             Range = new Range(startIndex, lastIndex);
         }
+
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<T, T[]>)obj!;
@@ -139,12 +121,8 @@ namespace HW_12
         public T[] ThreadResult(ThreadParam<T, T[]>[] threadParams) => threadParams.SelectMany(s => s.Result!).ToArray();
     }
 
-    internal abstract class FrequencyDictionaryThreadParam<T> : ThreadsUse<T, Dictionary<T, int>>, IThreadParamStrategy<T, Dictionary<T, int>>
+    internal abstract class FrequencyDictionaryThreadParam<T> : IThreadStrategy<T, Dictionary<T, int>>
     {
-        protected FrequencyDictionaryThreadParam(T[] arr) : base(arr)
-        {
-        }
-
         public void ThreadMethod(object? obj)
         {
             var param = (ThreadParam<T, Dictionary<T, int>>)obj!;
@@ -189,14 +167,8 @@ namespace HW_12
     }
     internal class FrequencyStringDictionaryThreadParam : FrequencyDictionaryThreadParam<string>
     {
-        public FrequencyStringDictionaryThreadParam(string[] arr) : base(arr)
-        {
-        }
     }
     internal class FrequencyCharDictionaryThreadParam : FrequencyDictionaryThreadParam<char>
     {
-        public FrequencyCharDictionaryThreadParam(char[] arr) : base(arr)
-        {
-        }
     }
 }

@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace HW_12
 {
-    internal interface IThreadParamStrategy<T, TResult>
+    internal interface IThreadStrategy<T, TResult>
     {
         public bool HasIndex => false;
         public Range Range => default;
