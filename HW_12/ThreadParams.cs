@@ -104,7 +104,9 @@ namespace HW_12
             var itemsCount = data.Length / threadCount;
             for (int i = 0; i < threadCount; i++)
             {
-                result[i] = ThreadParam<T1, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
+                result[i] = ThreadParam<T1, TResult>.Create(
+                    i == threadCount - 1 ? data[(i * itemsCount)..] : data.Slice(i * itemsCount, itemsCount)
+                    , i);
             }
 
             return result;
