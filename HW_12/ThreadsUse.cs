@@ -7,6 +7,7 @@ namespace HW_12
         private readonly IThreadStrategy<T, TResult> _strategy;
         private readonly T[] _arr;
         private readonly Stopwatch _timer = new();
+        private readonly CancellationTokenSource _cancelTokenSource;
         private TaskParam<T, TResult>[]? _taskParams;
         private Task[] _tasks;
         public TResult? Result { get; private set; } = default;
@@ -21,6 +22,7 @@ namespace HW_12
             _arr = arr;
             _strategy = strategy;
             _tasks = new Task[taskCount];
+            _cancelTokenSource = new CancellationTokenSource();
         }
 
         public void ThreadDo()
@@ -32,22 +34,17 @@ namespace HW_12
             if (_strategy is IInitParams initParams)
             {
                 _taskParams = initParams.Init<T, TResult>(_arr.AsMemory(), _tasks.Length);
+                FeelTask();
             }
             else
             {
-                var data = _arr.AsMemory();
-                var itemsCount = data.Length / _tasks.Length;
-                for (int i = 0; i < _taskParams.Length; i++)
-                {
-                    _taskParams[i] = TaskParam<T, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
-                    var task = _taskParams[i];
-                    _tasks[i] = Task.Run(() => _strategy.ThreadMethod(task));
-                }
+                FeelTask();
             }
             try
             {
-                //FeelTask();
                 _timer.Start();
+                for (int i = 0; i < _tasks.Length; i++)
+                    _tasks[i].Start();
 
                 ToAbort();
                 Task.WaitAll(_tasks);
@@ -69,26 +66,27 @@ namespace HW_12
         }
         private void FeelTask()
         {
-            _timer.Start();
-            for (int i = 0; i < _tasks.Length; i++)
-            {
-                
-                _tasks[i].Start();
-            }
+            var data = _arr.AsMemory();
+            var itemsCount = data.Length / _tasks.Length;
             
+            for (int i = 0; i < _taskParams.Length; i++)
+            {
+                _taskParams[i] = TaskParam<T, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
+                var task = _taskParams[i];
+                _tasks[i] = new Task(() => _strategy.ThreadMethod(task), _cancelTokenSource.Token);
+            }
         }
 
         private void ToAbort()
         {
-            while (_tasks.Any(t => t.IsCompleted))
+            while (!_tasks.Any(t => t.IsCompleted) && !_cancelTokenSource.IsCancellationRequested)
             {
                 Console.SetCursorPosition(10, 1);
                 Console.WriteLine("Press 'Escape' to interrupt threads");
 
                 if (Console.ReadKey(true).Key == ConsoleKey.Escape)
                 {
-                    foreach (var t in _tasks)
-                        t.Dispose();
+                    _cancelTokenSource.Cancel();
                     throw new Exception("Threads was Aborted");
                 }
             }
