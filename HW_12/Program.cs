@@ -20,7 +20,7 @@ namespace HW_12
 
             var pop = new ThreadsUse<int, decimal>(threadsCount, arr, new AverageThreadStrategy<int>());
             pop.ThreadDo();
-            pop.Print();
+            pop.Print();//grr
         }
     }
 }
