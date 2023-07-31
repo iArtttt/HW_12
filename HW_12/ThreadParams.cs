@@ -124,7 +124,7 @@ namespace HW_12
         }
     }
 
-    internal abstract class FrequencyDictionaryThreadStrategy<T> : IThreadStrategy<T, Dictionary<T, int>> where T: notnull
+    internal class FrequencyDictionaryThreadStrategy<T> : IThreadStrategy<T, Dictionary<T, int>> where T: notnull
     {
         public void ThreadMethod(object? obj)
         {
@@ -167,11 +167,5 @@ namespace HW_12
             }
             return result;
         }
-    }
-    internal class FrequencyStringDictionaryThreadStrategy : FrequencyDictionaryThreadStrategy<string>
-    {
-    }
-    internal class FrequencyCharDictionaryThreadStrategy : FrequencyDictionaryThreadStrategy<char>
-    {
     }
 }
