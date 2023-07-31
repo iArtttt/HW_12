@@ -10,12 +10,12 @@ namespace HW_12
 {
     internal abstract class AvarageSumStrategy<T, TResult> : IThreadStrategy<T, TResult> where T : struct, INumber<T> //where TResult : INumber<T>
     {
-        protected abstract TResult MethodResult(ulong result, ThreadParam<T, TResult> param);
-        protected abstract TResult FinalAction(TResult result, ThreadParam<T, TResult> param);
-        protected abstract TResult FinalResult(TResult result, ThreadParam<T, TResult>[] param);
+        protected abstract TResult MethodResult(ulong result, TaskParam<T, TResult> param);
+        protected abstract TResult FinalAction(TResult result, TaskParam<T, TResult> param);
+        protected abstract TResult FinalResult(TResult result, TaskParam<T, TResult>[] param);
         public void ThreadMethod(object? obj)
         {
-            var param = (ThreadParam<T, TResult>)obj!;
+            var param = (TaskParam<T, TResult>)obj!;
             var span = param.Data.Span;
             ulong result = default;
 
@@ -28,7 +28,7 @@ namespace HW_12
             param.Result = MethodResult(result, param);
         }
 
-        public TResult ThreadResult(ThreadParam<T, TResult>[] threadParams)
+        public TResult ThreadResult(TaskParam<T, TResult>[] threadParams)
         {
             TResult result = default;
             foreach (var thread in threadParams)
@@ -39,22 +39,22 @@ namespace HW_12
     }
     internal class SumThreadStrategy<T> : AvarageSumStrategy<T, ulong> where T : struct, INumber<T>
     {
-        protected override ulong MethodResult(ulong result, ThreadParam<T, ulong> param) => result;
-        protected override ulong FinalAction(ulong result, ThreadParam<T, ulong> param) => result + param.Result;
-        protected override ulong FinalResult(ulong result, ThreadParam<T, ulong>[] param) => result;
+        protected override ulong MethodResult(ulong result, TaskParam<T, ulong> param) => result;
+        protected override ulong FinalAction(ulong result, TaskParam<T, ulong> param) => result + param.Result;
+        protected override ulong FinalResult(ulong result, TaskParam<T, ulong>[] param) => result;
     }
     internal class AverageThreadStrategy<T> : AvarageSumStrategy<T, decimal> where T : struct, INumber<T>
     {
-        protected override decimal MethodResult(ulong result, ThreadParam<T, decimal> param) => result / (ulong)param.Data.Span.Length;        
-        protected override decimal FinalAction(decimal result, ThreadParam<T, decimal> param) => result + param.Result;
-        protected override decimal FinalResult(decimal result, ThreadParam<T, decimal>[] param) => (decimal)(result / param.Length);        
+        protected override decimal MethodResult(ulong result, TaskParam<T, decimal> param) => result / (ulong)param.Data.Span.Length;        
+        protected override decimal FinalAction(decimal result, TaskParam<T, decimal> param) => result + param.Result;
+        protected override decimal FinalResult(decimal result, TaskParam<T, decimal>[] param) => (decimal)(result / param.Length);        
     }
 
     internal abstract class MaxMinStrategy<T> : IThreadStrategy<T, T> where T : struct, INumber<T>
     {
         public void ThreadMethod(object? obj)
         {
-            var param = (ThreadParam<T, T>)obj!;
+            var param = (TaskParam<T, T>)obj!;
             var span = param.Data.Span;
             T result = default;
             for (int i = 0; i < span.Length; i++)
@@ -66,7 +66,7 @@ namespace HW_12
             param.Result = result;
         }
         protected abstract int Compare(T result, T compare);
-        public T ThreadResult(ThreadParam<T, T>[] threadParams)
+        public T ThreadResult(TaskParam<T, T>[] threadParams)
         {
             T result = default;
             foreach (var thread in threadParams)
@@ -97,7 +97,7 @@ namespace HW_12
 
         public void ThreadMethod(object? obj)
         {
-            var param = (ThreadParam<T, T[]>)obj!;
+            var param = (TaskParam<T, T[]>)obj!;
             var span = param.Data.Span;
             T[] result = new T[span.Length];
 
@@ -108,16 +108,16 @@ namespace HW_12
             }
             param.Result = result;
         }
-        public T[] ThreadResult(ThreadParam<T, T[]>[] threadParams) => threadParams.SelectMany(s => s.Result!).ToArray();
-        public ThreadParam<T1, TResult>[] Init<T1, TResult>(Memory<T1> data, int threadCount)
+        public T[] ThreadResult(TaskParam<T, T[]>[] threadParams) => threadParams.SelectMany(s => s.Result!).ToArray();
+        public TaskParam<T1, TResult>[] Init<T1, TResult>(Memory<T1> data, int threadCount)
         {
-            var result = new ThreadParam<T1, TResult>[threadCount];
+            var result = new TaskParam<T1, TResult>[threadCount];
             data = data[Range]; // slice all data to the initial copy range
 
             var itemsCount = data.Length / threadCount;
             for (int i = 0; i < threadCount; i++)
             {
-                result[i] = ThreadParam<T1, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
+                result[i] = TaskParam<T1, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
             }
 
             return result;
@@ -128,7 +128,7 @@ namespace HW_12
     {
         public void ThreadMethod(object? obj)
         {
-            var param = (ThreadParam<T, Dictionary<T, int>>)obj!;
+            var param = (TaskParam<T, Dictionary<T, int>>)obj!;
             var span = param.Data.Span;
             Dictionary<T, int> result = new();
 
@@ -148,7 +148,7 @@ namespace HW_12
             param.Result = result;
         }
 
-        public Dictionary<T, int> ThreadResult(ThreadParam<T, Dictionary<T, int>>[] threadParams)
+        public Dictionary<T, int> ThreadResult(TaskParam<T, Dictionary<T, int>>[] threadParams)
         {
             Dictionary<T, int> result = new();
             foreach (var thread in threadParams)

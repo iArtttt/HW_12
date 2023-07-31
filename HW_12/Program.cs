@@ -9,7 +9,7 @@ namespace HW_12
         static void Main(string[] args)
         {
             Random random = new Random();
-            int[] arr = new int[1_140_060_467];
+            int[] arr = new int[1_000_000_000];
             for (int i = 0; i < arr.Length; i++)
             {
                 arr[i] = i+1;
@@ -18,7 +18,7 @@ namespace HW_12
             var threadsCount = int.Parse(Console.ReadLine());
             if (threadsCount <= 0) threadsCount = 1;
 
-            var pop = new ThreadsUse<int, decimal>(threadsCount, arr, new AverageThreadStrategy<int>());
+            var pop = new ThreadsUse<int, ulong>(threadsCount, arr, new SumThreadStrategy<int>());
             pop.ThreadDo();
             pop.Print();//grr
         }

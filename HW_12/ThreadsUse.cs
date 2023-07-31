@@ -7,52 +7,52 @@ namespace HW_12
         private readonly IThreadStrategy<T, TResult> _strategy;
         private readonly T[] _arr;
         private readonly Stopwatch _timer = new();
-        private ThreadParam<T, TResult>[]? _threadParams;
-        private Thread[] _threads;
+        private TaskParam<T, TResult>[]? _taskParams;
+        private Task[] _tasks;
         public TResult? Result { get; private set; } = default;
 
-        public ThreadsUse(int threadCount, T[] arr, IThreadStrategy<T, TResult> strategy)
+        public ThreadsUse(int taskCount, T[] arr, IThreadStrategy<T, TResult> strategy)
         {
-            if (threadCount <= 0) throw new ArgumentException("thread count must be more than 0", nameof(threadCount));
+            if (taskCount <= 0) throw new ArgumentException("thread count must be more than 0", nameof(taskCount));
             if (arr == null) throw new ArgumentNullException(nameof(arr));
             if (arr.Length <= 0) throw new ArgumentOutOfRangeException(nameof(arr));
             if (strategy == null) throw new ArgumentNullException(nameof(strategy));
 
             _arr = arr;
             _strategy = strategy;
-            _threads = new Thread[threadCount];
+            _tasks = new Task[taskCount];
         }
 
         public void ThreadDo()
         {
-            FeelThread();
-            if (_threadParams == null || _strategy == default) return;
+            _taskParams = new TaskParam<T, TResult>[_tasks.Length];
+
+            if (_taskParams == null || _strategy == default) return;
 
             if (_strategy is IInitParams initParams)
             {
-                _threadParams = initParams.Init<T, TResult>(_arr.AsMemory(), _threads.Length);
+                _taskParams = initParams.Init<T, TResult>(_arr.AsMemory(), _tasks.Length);
             }
             else
             {
                 var data = _arr.AsMemory();
-                var itemsCount = data.Length / _threads.Length;
-                for (int i = 0; i < _threadParams.Length; i++)
+                var itemsCount = data.Length / _tasks.Length;
+                for (int i = 0; i < _taskParams.Length; i++)
                 {
-                    _threadParams[i] = ThreadParam<T, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
+                    _taskParams[i] = TaskParam<T, TResult>.Create(data.Slice(i * itemsCount, itemsCount), i);
+                    var task = _taskParams[i];
+                    _tasks[i] = Task.Run(() => _strategy.ThreadMethod(task));
                 }
             }
-            
             try
             {
+                //FeelTask();
                 _timer.Start();
-                for (int i = 0; i < _threads.Length; i++)
-                    _threads[i].Start(_threadParams[i]);
 
                 ToAbort();
-                
-                for (int i = 0; i < _threads.Length; i++)
-                        _threads[i].Join();
-                Result = _strategy.ThreadResult(_threadParams);
+                Task.WaitAll(_tasks);
+
+                Result = _strategy.ThreadResult(_taskParams);
             }
             catch (Exception ex)
             {
@@ -67,26 +67,28 @@ namespace HW_12
         {
             Console.WriteLine($"Result is {Result}; Time is {_timer.Elapsed}");
         }
-        private void FeelThread()
+        private void FeelTask()
         {
-            for (int i = 0; i < _threads.Length; i++)
+            _timer.Start();
+            for (int i = 0; i < _tasks.Length; i++)
             {
-                _threads[i] = new Thread(_strategy.ThreadMethod);
+                
+                _tasks[i].Start();
             }
-            _threadParams = new ThreadParam<T, TResult>[_threads.Length];
+            
         }
 
         private void ToAbort()
         {
-            while (_threads.Any(t => t.IsAlive))
+            while (_tasks.Any(t => t.IsCompleted))
             {
                 Console.SetCursorPosition(10, 1);
                 Console.WriteLine("Press 'Escape' to interrupt threads");
 
                 if (Console.ReadKey(true).Key == ConsoleKey.Escape)
                 {
-                    foreach (var t in _threads)
-                        t.Interrupt();
+                    foreach (var t in _tasks)
+                        t.Dispose();
                     throw new Exception("Threads was Aborted");
                 }
             }
