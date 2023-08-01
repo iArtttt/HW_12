@@ -40,16 +40,20 @@ namespace HW_12
             {
                 FeelTask();
             }
+            
             try
             {
-                _timer.Start();
-                for (int i = 0; i < _tasks.Length; i++)
-                    _tasks[i].Start();
+                var oneTask = Task.Run(() =>
+                {
+                    _timer.Start();
+                    for (int i = 0; i < _tasks.Length; i++)
+                        _tasks[i].Start();
+                    ToAbort();
+                }, _cancelTokenSource.Token);
 
-                ToAbort();
-                Task.WaitAll(_tasks);
+                oneTask.Wait();
 
-                Result = _strategy.ThreadResult(_taskParams);
+                
             }
             catch (Exception ex)
             {
@@ -58,7 +62,12 @@ namespace HW_12
                 Console.WriteLine($"\n{ex.Message}\n");
                 Console.ResetColor();
             }
-            finally { _timer.Stop(); }
+            finally 
+            { 
+                _timer.Stop(); 
+                _cancelTokenSource.Dispose(); 
+                Result = _strategy.ThreadResult(_taskParams);
+            }
         }
         public void Print()
         {
@@ -87,7 +96,10 @@ namespace HW_12
                 if (Console.ReadKey(true).Key == ConsoleKey.Escape)
                 {
                     _cancelTokenSource.Cancel();
-                    throw new Exception("Threads was Aborted");
+                    Console.Clear();
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"\nTask was canseled\n");
+                    Console.ResetColor();
                 }
             }
         }
