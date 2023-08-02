@@ -6,7 +6,7 @@ namespace HW_12
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Random random = new Random();
             int[] arr = new int[1_000_000_000];
@@ -19,7 +19,7 @@ namespace HW_12
             if (threadsCount <= 0) threadsCount = 1;
 
             var pop = new ThreadsUse<int, ulong>(threadsCount, arr, new SumThreadStrategy<int>());
-            pop.ThreadDo();
+            await pop.ThreadDo();
             pop.Print();//grr
         }
     }
