@@ -25,15 +25,16 @@ namespace HW_12
             _cancelTokenSource = new CancellationTokenSource();
         }
 
-        public void ThreadDo()
+        public async Task<TResult?> ThreadDo()
         {
             _taskParams = new TaskParam<T, TResult>[_tasks.Length];
 
-            if (_taskParams == null || _strategy == default) return;
+            if (_taskParams == null || _strategy == default) throw new InvalidOperationException();
 
             if (_strategy is IInitParams initParams)
             {
                 _taskParams = initParams.Init<T, TResult>(_arr.AsMemory(), _tasks.Length);
+                // FeelTask перет же _taskParams?!
                 FeelTask();
             }
             else
@@ -43,17 +44,17 @@ namespace HW_12
             
             try
             {
-                var oneTask = Task.Run(() =>
-                {
-                    _timer.Start();
-                    for (int i = 0; i < _tasks.Length; i++)
-                        _tasks[i].Start();
-                    ToAbort();
-                }, _cancelTokenSource.Token);
+                _timer.Start();
 
-                oneTask.Wait();
+                for (int i = 0; i < _tasks.Length; i++)
+                    _tasks[i].Start();
 
-                
+                var abortTask = ToAbort(); // just fire abort task and didn't wait it
+
+                await Task.WhenAll(_tasks);
+                _cancelTokenSource.Cancel(); // stop abort task (and other misc tasks)
+
+                Result = _strategy.ThreadResult(_taskParams);
             }
             catch (Exception ex)
             {
@@ -65,9 +66,10 @@ namespace HW_12
             finally 
             { 
                 _timer.Stop(); 
-                _cancelTokenSource.Dispose(); 
-                Result = _strategy.ThreadResult(_taskParams);
+                _cancelTokenSource.Dispose();
             }
+
+            return Result;
         }
         public void Print()
         {
@@ -86,22 +88,28 @@ namespace HW_12
             }
         }
 
-        private void ToAbort()
+        private Task ToAbort()
         {
-            while (!_tasks.Any(t => t.IsCompleted) && !_cancelTokenSource.IsCancellationRequested)
+            return Task.Run(() =>
             {
-                Console.SetCursorPosition(10, 1);
-                Console.WriteLine("Press 'Escape' to interrupt threads");
-
-                if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                while (!_tasks.Any(t => t.IsCompleted) && !_cancelTokenSource.IsCancellationRequested)
                 {
-                    _cancelTokenSource.Cancel();
-                    Console.Clear();
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"\nTask was canseled\n");
-                    Console.ResetColor();
+                    Console.SetCursorPosition(10, 1);
+                    Console.WriteLine("Press 'Escape' to interrupt threads");
+
+                    if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                    {
+                        if (!_cancelTokenSource.IsCancellationRequested)
+                        {
+                            _cancelTokenSource.Cancel();
+                            Console.Clear();
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"\nTask was canseled\n");
+                            Console.ResetColor();
+                        }
+                    }
                 }
-            }
+            });
         }
 
     }
