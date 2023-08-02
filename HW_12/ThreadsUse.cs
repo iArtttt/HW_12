@@ -34,7 +34,7 @@ namespace HW_12
             if (_strategy is IInitParams initParams)
             {
                 _taskParams = initParams.Init<T, TResult>(_arr.AsMemory(), _tasks.Length);
-                // FeelTask перет же _taskParams?!
+                // FeelTask перетрет же _taskParams?!
                 FeelTask();
             }
             else
